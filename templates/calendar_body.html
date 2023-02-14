@@ -1,0 +1,92 @@
+﻿<link href="main.css" rel="stylesheet" type="text/css" />
+<div>
+  <h2>Расписание</h2>
+		<p>Расписание на дату: {{data}}</p>
+		<table align="center" width="75%">
+			<tr class="head">
+				<th></th>
+				<th>LegoCode<br>
+			    Юго-Западный филиал</th>
+				<th>LegoCode<br>
+Академичесий<br>
+филиал</th>
+				<th>LegoCode<br> 
+				Центральный
+<br>
+филиал</th>
+			</tr>
+			<tr>
+				<th>Робототехника-1</th>
+				<td>Пн, 26 апреля 2021<br />
+				  17:00 - 18:30</td>
+				<td>Вт, 27 апреля 2021<br />
+  17:00 - 18:30</td>
+				<td>Ср, 28 апреля 2021<br />
+17:00 - 18:30</td>
+			</tr>
+			<tr class="even">
+				<th>Робототехника-2</th>
+				<td>Пн, 26 апреля 2021<br />
+19:00 - 20:30</td>
+				<td>Вт, 27 апреля 2021<br />
+			    19:00 - 20:30</td>
+				<td>Ср, 28 апреля 2021<br />
+			    19:00 - 20:30</td>
+			</tr>
+			<tr>
+				<th>Юные программисты</th>
+				<td>Пн, 26 апреля 2021<br />
+12:00 - 13:30</td>
+				<td>Вт, 27 апреля 2021<br />
+			    12:00 - 13:30</td>
+				<td>Ср, 28 апреля 2021<br />
+			    12:00 - 13:30</td>
+			</tr>
+			<tr class="even">
+				<th>Юные программисты-2</th>
+				<td>Пн, 26 апреля 2021<br />
+14:00 - 15:30</td>
+				<td>Вт, 27 апреля 2021<br />
+14:00 - 15:30</td>
+				<td>Ср, 28 апреля 2021<br />
+14:00 - 15:30</td>
+			</tr>
+		</table>
+		<form action="" method="post" id="registration">
+			<fieldset>
+			  <legend>Регистрация на занятия</legend>
+			  <p>
+	    	    <label class="title" for="name">Ваше имя:</label>
+			 <input type="text" name="name" id="name"><br />
+			    <label class="title" for="email">Ваш email:</label>
+			    <input type="text" name="email" id="email">
+			    <label class="title" for="phone">Телефон:</label>
+			    <input type="text" name="phone" id="phone">
+			  </p>
+			  <p>
+			    <label for="course" class="title">Выберите курс</label>
+			    <select name="course" id="course">
+			      <option selected disabled>Выберите курс:</option>
+			      <option value="r1">Робототехника-1</option>
+			      <option value="r2">Робототехника-2</option>
+			      <option value="u1">Юные программмисты-1</option>
+			      <option value="u2">Юные программмисты-2</option>
+		        </select>
+			    <br>
+		      </p>
+				<p>
+				  <label for="location" class="title">Удобный филиал: </label>
+					 <select name="location" id="location">
+					   <option selected disabled>Выберите филиал</option>
+					   <option value="ac">LegoCode - Академический</option>
+					   <option value="yz">LegoCode - ЮЗ</option>
+					   <option value="ct">LegoCode - Центр</option>
+              		 </select>
+                </p>
+				<span class="title">Уже наш клиент? </span>
+				<label><input type="radio" name="member" value="yes" /> Да</label>
+				<label><input type="radio" name="member" value="no" /> Нет</label></p>
+			</fieldset>
+ 	    <div class="submit"><input name="send_registration" type="submit" id="send_registration" value="Регистрация" /></div>
+		</form>
+</div>
