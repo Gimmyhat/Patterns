@@ -1,3 +1,4 @@
+import datetime
 from wsgiref.simple_server import make_server
 
 from framework.api import API
@@ -9,7 +10,7 @@ app = API()
 
 @app.route("/")
 def home(request, response):
-    response.text = render('index.html')
+    response.text = render('index.html', data=datetime.date.today())
 
 
 @app.route("/about/")
@@ -17,9 +18,25 @@ def about(request, response):
     response.text = render('about.html')
 
 
-@app.route("/hello/{name}/")
-def greeting(request, response, name):
-    response.text = f"Hello, {name}"
+class BaseRoute:
+    @staticmethod
+    def get(request, response):
+        response.json = dict(request.params)
+
+    @staticmethod
+    def post(request, response):
+        response.json = dict(request.params)
+
+
+@app.route("/contacts/")
+class Contacts(BaseRoute):
+    @staticmethod
+    def get(request, response):
+        response.text = render('contacts.html')
+
+    @staticmethod
+    def post(request, response):
+        response.text = render('contacts-resp.html', data=dict(request.params))
 
 
 if __name__ == '__main__':

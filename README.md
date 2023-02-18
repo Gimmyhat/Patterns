@@ -9,7 +9,7 @@ $ waitress-serve --listen=*:8000 simple_wsgi:application
 
 Запуск фреймворка 
 ```sh
-$ waitress-serve --listen=*:8000 main:app
+$ waitress-serve --listen=*:8000 main:api
 ```
 
 http://127.0.0.1:8000
