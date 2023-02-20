@@ -3,7 +3,7 @@
 Создание курса
 {% endblock %}
 {% block style %}
-	{% include "main.css" %}
+	{% include "inc-style.html" %}
 {% endblock %}
 {% block menu %}
 	{% include "top-menu.html" %}
@@ -12,12 +12,6 @@
 <h3>Создание категории</h3>
 <form method="post">
     <input type="text" name="name" placeholder="Название">
-    <button type="submit">Сохранить</button>
+    <button type="submit">Сохранить и вернуться на главную</button>
 </form>
-<br>
-<br>
-<div>
-	<a href="/courses/">назад к курсам</a>
-</div>
-
 {% endblock %}
