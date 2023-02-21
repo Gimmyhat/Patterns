@@ -1,9 +1,9 @@
 from wsgiref.simple_server import make_server
 
-import routes
-from variables import PORT
+import views
+from framework.variables import PORT
 
-app = routes.app
+app = views.app
 
 if __name__ == '__main__':
     # для отладки

@@ -1,15 +1,12 @@
-import inspect
 import urllib.parse
 
-from parse import parse
 from requests import Session as RequestsSession
 from webob import Request, Response
 from wsgiadapter import WSGIAdapter as RequestsWSGIAdapter
 
-
-def default_response(response):
-    response.status_code = 404
-    response.text = "Not found"
+from framework.error_handlers import debug_exception_handler
+from framework.exceptions import HTTPError
+from framework.route import Route
 
 
 def prepare_path(path):
@@ -21,58 +18,74 @@ def prepare_path(path):
 
 class API:
 
-    def __init__(self):
+    def __init__(self, debug=True):
         self._routes = {}
+        self._exception_handler = None
+        self._debug = debug
 
         # cached requests session
         self._session = None
 
+    @property
+    def debug(self):
+        return self._debug
+
     def __call__(self, environ, start_response):
+        path_info = environ["PATH_INFO"]
+
         request = Request(environ)
-        response = self.handle_request(request)
+        response = self.dispatch_request(request)
         return response(environ, start_response)
 
-    def add_route(self, path, handler):
-        """Добавляет новый маршрут"""
-        assert path not in self._routes, "Такой маршрут уже существует"
-
-        self._routes[path] = handler
-
-    def route(self, path):
+    def route(self, pattern, methods=None):
         """Декоратор, добавляющий новый маршрут"""
 
         def wrapper(handler):
-            self.add_route(path, handler)
+            self.add_route(pattern, handler, methods)
             return handler
 
         return wrapper
 
-    def find_handler(self, request_path):
-        # request_path = prepare_path(request_path)
+    def add_route(self, pattern, handler, methods=None):
+        """Добавляет новый маршрут"""
+        assert pattern not in self._routes, "Такой маршрут уже существует"
 
-        for path, handler in self._routes.items():
-            parse_result = parse(path, request_path)
-            if parse_result is not None:
-                return handler, parse_result.named
+        self._routes[pattern] = Route(path_pattern=pattern, handler=handler, methods=methods)
 
-        return None, None
+    def add_exception_handler(self, handler):
+        self._exception_handler = handler
 
-    def handle_request(self, request):
+    def _handle_exception(self, request, response, exception):
+        if self._exception_handler is not None:
+            self._exception_handler(request, response, exception)
+        else:
+            if self._debug is False:
+                raise exception
+
+            debug_exception_handler(request, response, exception)
+
+    def dispatch_request(self, request):
         response = Response()
 
-        handler, kwargs = self.find_handler(request_path=request.path)
+        route, kwargs = self.find_route(path=request.path)
 
-        if handler is not None:
-            if inspect.isclass(handler):
-                handler = getattr(handler(), request.method.lower(), None)
-                if handler is None:
-                    raise AttributeError("Method now allowed", request.method)
+        try:
+            if route is None:
+                raise HTTPError(status=404)
 
-            handler(request, response, **kwargs)
-        else:
-            default_response(response)
+            route.handle_request(request, response, **kwargs)
+        except Exception as e:
+            self._handle_exception(request, response, e)
 
         return response
+
+    def find_route(self, path):
+        for pattern, route in self._routes.items():
+            matched, kwargs = route.match(request_path=path)
+            if matched is True:
+                return route, kwargs
+
+        return None, {}
 
     def session(self, base_url="http://testserver"):
         """Cached Testing HTTP client based on Requests by Kenneth Reitz."""
@@ -81,3 +94,35 @@ class API:
             session.mount(base_url, RequestsWSGIAdapter(self))
             self._session = session
         return self._session
+
+
+# Новый вид WSGI-application.
+# Первый — логирующий (такой же, как основной,
+# только для каждого запроса выводит информацию
+# (тип запроса и параметры) в консоль.
+class DebugApplication(API):
+
+    def __init__(self):
+        self.application = API()
+        super().__init__()
+
+    def __call__(self, environ, start_response):
+        print('DEBUG MODE')
+        print(environ)
+        request = Request(environ)
+        response = self.dispatch_request(request)
+        return response(environ, start_response)
+
+
+# Новый вид WSGI-application.
+# Второй — фейковый (на все запросы пользователя отвечает:
+# 200 OK, Hello from Fake).
+class FakeApplication(API):
+
+    def __init__(self):
+        self.application = API()
+        super().__init__()
+
+    def __call__(self, env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/html')])
+        return [b'Hello from Fake']

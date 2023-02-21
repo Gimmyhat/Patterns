@@ -1,5 +1,4 @@
 from copy import deepcopy
-from quopri import decodestring
 
 
 # абстрактный пользователь
@@ -71,18 +70,25 @@ class CourseFactory:
 class Category:
     auto_id = 0
 
-    def __init__(self, name, category):
+    def __init__(self, name, parent=None):
         self.id = Category.auto_id
         Category.auto_id += 1
         self.name = name
-        self.category = category
+        self.parent = parent
+        self.children = []
         self.courses = []
 
+        if parent is not None:
+            parent.add_child(self)
+
+    def add_child(self, child):
+        self.children.append(child)
+
     def course_count(self):
-        result = len(self.courses)
-        if self.category:
-            result += self.category.course_count()
-        return result
+        count = len(self.courses)
+        for child in self.children:
+            count += child.course_count()
+        return count
 
 
 # основной интерфейс проекта
@@ -91,21 +97,35 @@ class Engine:
         self.teachers = []
         self.students = []
         self.courses = []
-        self.categories = []
+        self.root_categories = []
 
     @staticmethod
     def create_user(type_):
         return UserFactory.create(type_)
 
-    @staticmethod
-    def create_category(name, category=None):
-        return Category(name, category)
+    def create_category(self, name, parent=None):
+        category = Category(name, parent)
+        if parent is None:
+            self.root_categories.append(category)
+        return category
 
     def find_category_by_id(self, id):
-        for item in self.categories:
-            if item.id == int(id):
-                return item
+        for root in self.root_categories:
+            category = self._find_category_by_id(id, root)
+            if category is not None:
+                return category
         raise Exception(f'Нет категории с id = {id}')
+
+    def _find_category_by_id(self, id, category):
+        if category.id == int(id):
+            return category
+
+        for child in category.children:
+            subcategory = self._find_category_by_id(id, child)
+            if subcategory is not None:
+                return subcategory
+
+        return None
 
     @staticmethod
     def create_course(type_, name, category):
@@ -117,11 +137,38 @@ class Engine:
                 return item
         return None
 
-    @staticmethod
-    def decode_value(val):
-        val_b = bytes(val.replace('%', '=').replace("+", " "), 'UTF-8')
-        val_decode_str = decodestring(val_b)
-        return val_decode_str.decode('UTF-8')
+    def add_category(self, category):
+        self.root_categories.append(category)
+
+    def add_course(self, course):
+        self.courses.append(course)
+
+    def get_category_tree(self, category=None, with_courses=False):
+        if category is None:
+            categories = self.root_categories
+        else:
+            categories = category.children
+
+        category_list = []
+        for cat in categories:
+            cat_info = {'name': cat.name, 'id': cat.id}
+
+            if with_courses and cat.courses:
+                cat_info['courses'] = [course.name for course in cat.courses]
+
+            subcategories = self.get_category_tree(cat, with_courses)
+            if subcategories:
+                cat_info['subcategories'] = subcategories
+
+            category_list.append(cat_info)
+
+        return category_list
+
+    def count_courses(self, category):
+        count = len(category.get('courses', []))
+        for subcategory in category.get('subcategories', []):
+            count += self.count_courses(subcategory)
+        return count
 
 
 # порождающий паттерн Синглтон

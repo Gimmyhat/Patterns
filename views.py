@@ -1,5 +1,6 @@
-from framework.api import API
+from framework.api import API, DebugApplication, FakeApplication
 from framework.template import render
+from patterns.structural_patterns import Debug
 from patterns.сreational_patterns import Engine, Logger
 
 app = API()
@@ -7,48 +8,64 @@ site = Engine()
 logger = Logger('main')
 
 
-class BaseRoute:
+class Base:
     @staticmethod
     def get(request, response):
-        response.json = dict(request.params)
+        ...
 
     @staticmethod
     def post(request, response):
-        response.json = dict(request.params)
+        ...
 
 
 # Main page
 
-@app.route("/")
+@app.route("/", methods=['get'])
+@Debug(name='Index')
 def home(request, response):
     response.text = render('index.html',
-                           objects_list=site.categories)
+                           objects_list=site.root_categories)
 
 
 # Category
 
 @app.route("/create-category/")
-class CreateCategory(BaseRoute):
+class CreateCategory(Base):
     @staticmethod
     def get(request, response):
         response.text = render('create_category.html')
 
     @staticmethod
+    @Debug(name='Create Category')
     def post(request, response):
+        parent = None
+        cat_id = request.params.get('id')
+        if cat_id:
+            parent = site.find_category_by_id(int(cat_id))
         name = request.params['name']
-        category = None
-        new_category = site.create_category(name, category)
-        site.categories.append(new_category)
+        new_category = site.create_category(name, parent=parent)
         logger.log(f'Создана категория "{name}"')
         response.text = render('index.html',
-                               objects_list=site.categories)
+                               objects_list=site.root_categories,
+                               id=cat_id)
+
+
+@app.route('/category-list/')
+class CategoryList(Base):
+    @staticmethod
+    def get(request, response):
+        categories = site.get_category_tree(with_courses=True)
+        count_courses = site.count_courses
+        response.text = render('category_list.html',
+                               categories=categories,
+                               count_courses=count_courses)
 
 
 # Courses
 
 
 @app.route("/create-course/")
-class CreateCourse(BaseRoute):
+class CreateCourse(Base):
 
     @staticmethod
     def get(request, response):
@@ -58,6 +75,7 @@ class CreateCourse(BaseRoute):
                                name=cat.name)
 
     @staticmethod
+    @Debug(name='Create Course')
     def post(request, response):
         name = request.params['name']
         cat = site.find_category_by_id(int(request.params['id']))
@@ -71,7 +89,7 @@ class CreateCourse(BaseRoute):
 
 
 @app.route("/courses-list/")
-class CoursesList(BaseRoute):
+class CoursesList(Base):
     @staticmethod
     def get(request, response):
         cat = site.find_category_by_id(int(request.params['id']))
@@ -82,12 +100,13 @@ class CoursesList(BaseRoute):
 
 
 @app.route(("/copy-course/"))
-class CopyCourse(BaseRoute):
+class CopyCourse(Base):
 
     @staticmethod
     def get(request, response):
         name = site.get_course(request.params['name'])
         old_course = name
+        cat = None
         if old_course:
             new_name = f'copy_{old_course.name}'
             new_course = old_course.clone()
@@ -104,7 +123,7 @@ class CopyCourse(BaseRoute):
 
 # About
 
-@app.route("/about/")
+@app.route("/about/", methods=['get'])
 def about(request, response):
     response.text = render('about.html')
 
@@ -112,7 +131,7 @@ def about(request, response):
 # Contacts
 
 @app.route("/contacts/")
-class Contacts(BaseRoute):
+class Contacts(Base):
     @staticmethod
     def get(request, response):
         response.text = render('contacts.html')
