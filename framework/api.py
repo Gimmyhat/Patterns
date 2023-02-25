@@ -1,3 +1,4 @@
+import os.path
 import urllib.parse
 
 from requests import Session as RequestsSession
@@ -7,6 +8,7 @@ from wsgiadapter import WSGIAdapter as RequestsWSGIAdapter
 from framework.error_handlers import debug_exception_handler
 from framework.exceptions import HTTPError
 from framework.route import Route
+from framework.templates import get_templates_env
 
 
 def prepare_path(path):
@@ -18,7 +20,8 @@ def prepare_path(path):
 
 class API:
 
-    def __init__(self, debug=True):
+    def __init__(self, templates_dir='templates', debug=True):
+        self.templates = get_templates_env(os.path.abspath(templates_dir))
         self._routes = {}
         self._exception_handler = None
         self._debug = debug
@@ -63,6 +66,11 @@ class API:
                 raise exception
 
             debug_exception_handler(request, response, exception)
+
+    def template(self, name, context=None):
+        if context is None:
+            context = {}
+        return self.templates.get_template(name).render(**context)
 
     def dispatch_request(self, request):
         response = Response()
