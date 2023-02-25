@@ -1,9 +1,14 @@
+import quopri
 from copy import deepcopy
 
 
 # абстрактный пользователь
+from patterns.behavioral_patterns import Subject
+
+
 class User:
-    pass
+    def __init__(self, name):
+        self.name = name
 
 
 # преподаватель
@@ -13,9 +18,13 @@ class Teacher(User):
 
 # студент
 class Student(User):
-    pass
+
+    def __init__(self, name):
+        self.courses = []
+        super().__init__(name)
 
 
+# порождающий паттерн Абстрактная фабрика - фабрика пользователей
 class UserFactory:
     types = {
         'student': Student,
@@ -24,11 +33,11 @@ class UserFactory:
 
     # порождающий паттерн Фабричный метод
     @classmethod
-    def create(cls, type_):
-        return cls.types[type_]()
+    def create(cls, type_, name):
+        return cls.types[type_](name)
 
 
-# порождающий паттерн Прототип
+# порождающий паттерн Прототип - Курс
 class CoursePrototype:
     # прототип курсов обучения
 
@@ -36,12 +45,22 @@ class CoursePrototype:
         return deepcopy(self)
 
 
-class Course(CoursePrototype):
+class Course(CoursePrototype, Subject):
 
     def __init__(self, name, category):
         self.name = name
         self.category = category
         self.category.courses.append(self)
+        self.students = []
+        super().__init__()
+
+    def __getitem__(self, item):
+        return self.students[item]
+
+    def add_student(self, student: Student):
+        self.students.append(student)
+        student.courses.append(self)
+        self.notify()
 
 
 # интерактивный курс
@@ -100,8 +119,8 @@ class Engine:
         self.root_categories = []
 
     @staticmethod
-    def create_user(type_):
-        return UserFactory.create(type_)
+    def create_user(type_, name):
+        return UserFactory.create(type_, name)
 
     def create_category(self, name, parent=None):
         category = Category(name, parent)
@@ -137,6 +156,11 @@ class Engine:
                 return item
         return None
 
+    def get_student(self, name) -> Student:
+        for item in self.students:
+            if item.name == name:
+                return item
+
     def add_category(self, category):
         self.root_categories.append(category)
 
@@ -169,6 +193,15 @@ class Engine:
         for subcategory in category.get('subcategories', []):
             count += self.count_courses(subcategory)
         return count
+
+    @staticmethod
+    def decode_value(data):
+        new_data = {}
+        for k, v in data.items():
+            val = bytes(v.replace('%', '=').replace("+", " "), 'UTF-8')
+            val_decode_str = quopri.decodestring(val).decode('UTF-8')
+            new_data[k] = val_decode_str
+        return new_data
 
 
 # порождающий паттерн Синглтон

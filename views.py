@@ -1,39 +1,36 @@
-from framework.api import API, DebugApplication, FakeApplication
-from framework.template import render
+from framework.api import API
+from patterns.behavioral_patterns import (
+    EmailNotifier,
+    SmsNotifier,
+    ListView,
+    CreateView, BaseSerializer
+)
 from patterns.structural_patterns import Debug
 from patterns.сreational_patterns import Engine, Logger
 
 app = API()
 site = Engine()
 logger = Logger('main')
-
-
-class Base:
-    @staticmethod
-    def get(request, response):
-        ...
-
-    @staticmethod
-    def post(request, response):
-        ...
+email_notifier = EmailNotifier()
+sms_notifier = SmsNotifier()
 
 
 # Main page
 
-@app.route("/", methods=['get'])
-@Debug(name='Index')
-def home(request, response):
-    response.text = render('index.html',
-                           objects_list=site.root_categories)
+@app.route("/")
+class Index(ListView):
+    queryset = site.root_categories
+    template_name = 'index.html'
 
 
 # Category
 
 @app.route("/create-category/")
-class CreateCategory(Base):
+class CreateCategory:
+
     @staticmethod
     def get(request, response):
-        response.text = render('create_category.html')
+        response.text = app.template('create_category.html')
 
     @staticmethod
     @Debug(name='Create Category')
@@ -44,35 +41,41 @@ class CreateCategory(Base):
             parent = site.find_category_by_id(int(cat_id))
         name = request.params['name']
         new_category = site.create_category(name, parent=parent)
-        logger.log(f'Создана категория "{name}"')
-        response.text = render('index.html',
-                               objects_list=site.root_categories,
-                               id=cat_id)
+        logger.log(f'Создана категория "{new_category.name}"')
+        response.text = app.template('index.html',
+                                     context={
+                                         'objects_list': site.root_categories,
+                                         'id': cat_id
+                                     })
 
 
 @app.route('/category-list/')
-class CategoryList(Base):
+class CategoryList:
     @staticmethod
     def get(request, response):
         categories = site.get_category_tree(with_courses=True)
         count_courses = site.count_courses
-        response.text = render('category_list.html',
-                               categories=categories,
-                               count_courses=count_courses)
+        response.text = app.template('category_list.html',
+                                     context={
+                                         'categories': categories,
+                                         'count_courses': count_courses
+                                     })
 
 
 # Courses
 
 
 @app.route("/create-course/")
-class CreateCourse(Base):
+class CreateCourse:
 
     @staticmethod
     def get(request, response):
         cat = site.find_category_by_id(int(request.params['id']))
-        response.text = render('create_course.html',
-                               id=cat.id,
-                               name=cat.name)
+        response.text = app.template('create_course.html',
+                                     context={
+                                         'id': cat.id,
+                                         'name': cat.name
+                                     })
 
     @staticmethod
     @Debug(name='Create Course')
@@ -80,27 +83,35 @@ class CreateCourse(Base):
         name = request.params['name']
         cat = site.find_category_by_id(int(request.params['id']))
         course = site.create_course('record', name, cat)
+        # Добавляем наблюдателей на курс
+        course.observers.append(email_notifier)
+        course.observers.append(sms_notifier)
+
         site.courses.append(course)
-        logger.log(f'Создан курс "{name}"')
-        response.text = render('course_list.html',
-                               id=cat.id,
-                               name=cat.name,
-                               objects_list=cat.courses)
+
+        response.text = app.template('course_list.html',
+                                     context={
+                                         'id': cat.id,
+                                         'name': cat.name,
+                                         'objects_list': cat.courses
+                                     })
 
 
 @app.route("/courses-list/")
-class CoursesList(Base):
+class CoursesList:
     @staticmethod
     def get(request, response):
         cat = site.find_category_by_id(int(request.params['id']))
-        response.text = render('course_list.html',
-                               id=cat.id,
-                               name=cat.name,
-                               objects_list=cat.courses)
+        response.text = app.template('course_list.html',
+                                     context={
+                                         'id': cat.id,
+                                         'name': cat.name,
+                                         'objects_list': cat.courses
+                                     })
 
 
 @app.route(("/copy-course/"))
-class CopyCourse(Base):
+class CopyCourse:
 
     @staticmethod
     def get(request, response):
@@ -115,10 +126,65 @@ class CopyCourse(Base):
             cat = site.find_category_by_id(new_course.category.id)
             cat.courses.append(new_course)
             logger.log(f'Создана копия курса "{old_course.name}"')
-        response.text = render('course_list.html',
-                               id=cat.id,
-                               name=cat.name,
-                               objects_list=cat.courses)
+        response.text = app.template('course_list.html',
+                                     context={
+                                         'id': cat.id,
+                                         'name': cat.name,
+                                         'objects_list': cat.courses
+                                     })
+
+
+@app.route("/student-list/")
+class StudentListView(ListView):
+    queryset = site.students
+    template_name = 'student_list.html'
+
+
+@app.route("/create-student/")
+class StudentCreateView(CreateView):
+    template_name = 'create_student.html'
+
+    def create_obj(self, request):
+        name = request.params.get('name')
+        new_obj = site.create_user('student', name)
+        site.students.append(new_obj)
+
+    def get_context_data(self):
+        return {'objects_list': site.students}
+
+    def post(self, request, response):
+        self.create_obj(request)
+        self.template_name = 'student_list.html'
+        response.text = self.template(self.template_name, context=self.get_context_data())
+
+
+@app.route("/add-student/")
+class AddStudentByCourseCreateView(CreateView):
+    template_name = 'add_student.html'
+
+    def get_context_data(self):
+        context = super().get_context_data()
+        context['courses'] = site.courses
+        context['students'] = site.students
+        return context
+
+    def create_obj(self, request):
+        course_name = request.params['course_name']
+        course = site.get_course(course_name)
+        student_name = request.params['student_name']
+        student = site.get_student(student_name)
+        course.add_student(student)
+
+    def post(self, request, response):
+        self.create_obj(request)
+        response.text = self.template(self.template_name, context=self.get_context_data())
+
+
+@app.route("/api/")
+class CourseApi:
+    @Debug(name='CourseApi')
+    def __call__(self, request):
+        return '200 OK', BaseSerializer(site.courses).save()
 
 
 # About
@@ -131,7 +197,7 @@ def about(request, response):
 # Contacts
 
 @app.route("/contacts/")
-class Contacts(Base):
+class Contacts:
     @staticmethod
     def get(request, response):
         response.text = render('contacts.html')
