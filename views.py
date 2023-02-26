@@ -1,4 +1,5 @@
 from framework.api import API
+from patterns.architectural_system_pattern_unit_of_work import UnitOfWork
 from patterns.behavioral_patterns import (
     EmailNotifier,
     SmsNotifier,
@@ -6,13 +7,15 @@ from patterns.behavioral_patterns import (
     CreateView, BaseSerializer
 )
 from patterns.structural_patterns import Debug
-from patterns.сreational_patterns import Engine, Logger
+from patterns.сreational_patterns import Engine, Logger, MapperRegistry
 
 app = API()
 site = Engine()
 logger = Logger('main')
 email_notifier = EmailNotifier()
 sms_notifier = SmsNotifier()
+UnitOfWork.new_current()
+UnitOfWork.get_current().set_mapper_registry(MapperRegistry)
 
 
 # Main page
@@ -136,8 +139,11 @@ class CopyCourse:
 
 @app.route("/student-list/")
 class StudentListView(ListView):
-    queryset = site.students
     template_name = 'student_list.html'
+
+    def get_queryset(self):
+        mapper = MapperRegistry.get_current_mapper('student')
+        return mapper.all()
 
 
 @app.route("/create-student/")
@@ -148,6 +154,8 @@ class StudentCreateView(CreateView):
         name = request.params.get('name')
         new_obj = site.create_user('student', name)
         site.students.append(new_obj)
+        new_obj.mark_new()
+        UnitOfWork.get_current().commit()
 
     def get_context_data(self):
         return {'objects_list': site.students}
