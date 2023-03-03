@@ -197,20 +197,24 @@ class CourseApi:
 
 # About
 
-@app.route("/about/", methods=['get'])
-def about(request, response):
-    response.text = render('about.html')
+@app.route("/about/")
+class About:
+
+    @staticmethod
+    def get(request, response):
+        response.text = app.template('about.html')
 
 
 # Contacts
 
 @app.route("/contacts/")
 class Contacts:
+
     @staticmethod
     def get(request, response):
-        response.text = render('contacts.html')
+        response.text = app.template('contacts.html')
 
     @staticmethod
     def post(request, response):
-        response.text = render('contacts-resp.html',
-                               data=dict(request.params))
+        response.text = app.template('contacts-resp.html',
+                                     context={'data': request.params})

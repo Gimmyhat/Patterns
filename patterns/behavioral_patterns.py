@@ -32,7 +32,7 @@ class SmsNotifier(Observer):
 class EmailNotifier(Observer):
 
     def update(self, subject):
-        print(('EMAIL->', 'к нам присоединился', subject.students[-1].name))
+        print('EMAIL->', 'к нам присоединился', subject.students[-1].name)
 
 
 class BaseSerializer:
@@ -58,7 +58,7 @@ class TemplateView:
     def get_context_data(self):
         return {}
 
-    def template(self, name, context=None):
+    def template(self, name):
         context = self.get_context_data()
         return self.templates.get_template(name).render(**context)
 

@@ -104,33 +104,30 @@ class API:
         return self._session
 
 
-# Новый вид WSGI-application.
-# Первый — логирующий (такой же, как основной,
-# только для каждого запроса выводит информацию
-# (тип запроса и параметры) в консоль.
-class DebugApplication(API):
-
-    def __init__(self):
-        self.application = API()
-        super().__init__()
+class BaseApplication(API):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def __call__(self, environ, start_response):
-        print('DEBUG MODE')
-        print(environ)
         request = Request(environ)
         response = self.dispatch_request(request)
         return response(environ, start_response)
 
 
-# Новый вид WSGI-application.
-# Второй — фейковый (на все запросы пользователя отвечает:
-# 200 OK, Hello from Fake).
-class FakeApplication(API):
+class DebugApplication(BaseApplication):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def __init__(self):
-        self.application = API()
-        super().__init__()
+    def __call__(self, environ, start_response):
+        print('DEBUG MODE')
+        print(environ)
+        return super().__call__(environ, start_response)
 
-    def __call__(self, env, start_response):
+
+class FakeApplication(BaseApplication):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, environ, start_response):
         start_response('200 OK', [('Content-Type', 'text/html')])
         return [b'Hello from Fake']
