@@ -15,30 +15,10 @@
 
 <ul>
     {% for category in categories %}
-    {{ render_category(category) }}
+    {{ render_category(category) | safe }}
     {% endfor %}
 </ul>
 
 {% endblock %}
 
-{% macro render_category(category) %}
-<li>{{ category.name }} <span>Количество курсов: {{count_courses(category)}}</span>
-    <a class="section_creation" href="/create-category/?id={{category.id}}">Создать субкатегорию</a>
-    <a class="section_creation" href="/create-course/?id={{category.id}}">Создать новый курс</a>
-    {% if category.courses %}
-    <ul>
-        {% for course in category.courses %}
-        <li>{{ course }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% if category.subcategories %}
-    <ul>
-        {% for subcategory in category.subcategories %}
-        {{ render_category(subcategory) }}
-        {% endfor %}
-    </ul>
-    {% endif %}
-</li>
-{% endmacro %}
 

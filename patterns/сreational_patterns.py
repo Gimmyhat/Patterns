@@ -195,6 +195,30 @@ class Engine:
             count += self.count_courses(subcategory)
         return count
 
+    def render_category(self, category):
+        course_count = self.count_courses(category)
+        subcategories = category.get('subcategories', [])
+        courses = category.get('courses', [])
+        category_id = category.get('id')
+        category_name = category.get('name')
+
+        html = f'<li>{category_name} <span>Количество курсов: {course_count}</span>'
+        html += f'<a class="section_creation" href="/create-category/?id={category_id}">Создать субкатегорию</a>&nbsp;'
+        html += f'<a class="section_creation" href="/create-course/?id={category_id}">Создать новый курс</a>'
+        if courses:
+            html += '<ul>'
+            for course in courses:
+                html += f'<li>{course}</li>'
+            html += '</ul>'
+        if subcategories:
+            html += '<ul>'
+            for subcategory in subcategories:
+                html += self.render_category(subcategory)
+            html += '</ul>'
+        html += '</li>'
+
+        return html
+
     @staticmethod
     def decode_value(data):
         new_data = {}

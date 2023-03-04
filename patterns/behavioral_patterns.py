@@ -63,10 +63,10 @@ class TemplateView:
         return self.templates.get_template(name).render(**context)
 
     def get(self, request, response):
-        response.text = self.template(self.template_name, context=self.get_context_data())
+        response.text = self.template(self.template_name)
 
     def post(self, request, response):
-        response.text = self.template(self.template_name, context=self.get_context_data())
+        response.text = self.template(self.template_name)
 
 
 class ListView(TemplateView):
