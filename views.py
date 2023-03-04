@@ -45,7 +45,7 @@ class CreateCategory:
         name = request.params['name']
         new_category = site.create_category(name, parent=parent)
         logger.log(f'Создана категория "{new_category.name}"')
-        response.text = app.template('index.html',
+        response.text = app.template('category_list.html',
                                      context={
                                          'objects_list': site.root_categories,
                                          'id': cat_id
@@ -58,10 +58,12 @@ class CategoryList:
     def get(request, response):
         categories = site.get_category_tree(with_courses=True)
         count_courses = site.count_courses
+        render_category = site.render_category
         response.text = app.template('category_list.html',
                                      context={
                                          'categories': categories,
-                                         'count_courses': count_courses
+                                         'count_courses': count_courses,
+                                         'render_category': render_category,
                                      })
 
 
@@ -163,7 +165,7 @@ class StudentCreateView(CreateView):
     def post(self, request, response):
         self.create_obj(request)
         self.template_name = 'student_list.html'
-        response.text = self.template(self.template_name, context=self.get_context_data())
+        response.text = self.template(self.template_name)
 
 
 @app.route("/add-student/")
@@ -185,7 +187,7 @@ class AddStudentByCourseCreateView(CreateView):
 
     def post(self, request, response):
         self.create_obj(request)
-        response.text = self.template(self.template_name, context=self.get_context_data())
+        response.text = self.template(self.template_name)
 
 
 @app.route("/api/")
