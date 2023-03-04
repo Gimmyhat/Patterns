@@ -1,3 +1,4 @@
+from functools import wraps
 from time import time
 
 
@@ -13,6 +14,7 @@ class Debug:
         '''
 
         # это вспомогательная функция будет декорировать каждый отдельный метод класса, см. ниже
+        @wraps
         def timeit(method):
             '''
             нужен для того, чтобы декоратор класса wrapper обернул в timeit
@@ -25,7 +27,7 @@ class Debug:
                 te = time()
                 delta = te - ts
 
-                print(f'debug --> {self.name} выполнялся {delta:2.2f} ms')
+                print(f'debug --> {cls.__name__} выполнялся {delta:2.2f} ms')
                 return result
 
             return timed
